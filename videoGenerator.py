@@ -13,7 +13,7 @@ from PIL import ImageFont
 def create_text_clip(content, duration, fontsize=50, color='white'):
     img = Image.new('RGBA', (854, 480), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype('sans.ttf',50)
+    font = ImageFont.truetype('sans.ttf',70)
     draw.text((200, 200), content, fill=color, font=font)
     img = np.array(img) 
     text_clip = ImageClip(img, duration=duration)
@@ -31,7 +31,7 @@ def create_text_clip2(content, duration, fontsize=50, color='white'):
 def create_text_clip3(content, duration, fontsize=50, color='white', words_per_line=4):
     img = Image.new('RGBA', (854, 480), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype('sans.ttf', 25)
+    font = ImageFont.truetype('sans.ttf', 50)
 
     # Split the content into lines with 4 words per line
     words = content.split()
@@ -49,17 +49,53 @@ def create_text_clip3(content, duration, fontsize=50, color='white', words_per_l
 
 # Function to create the composite video for a single row
 def create_composite_video(image_path, row):
-    background_clip = ImageClip(image_path)
+    background_clip = ImageClip("background.jpeg")
+    width, height = background_clip.size
+
+    # Load image
+    with Image.open(image_path) as img:
+
+      img_width, img_height = img.size
+  
+      # Calculate ratios
+      width_ratio = width / img_width
+      height_ratio = height / img_height
+  
+      # Determine scale factor
+      if width_ratio > height_ratio:
+        scale = width_ratio
+      else:
+        scale = height_ratio
+
+      # Resize image
+      new_width = int(img_width * scale)
+      new_height = int(img_height * scale)
+      img = img.resize((new_width, new_height))
+
+      # Crop image
+      left = (new_width - width) / 2
+      top = (new_height - height) / 2
+      right = left + width
+      bottom = top + height
+      img = img.crop((left, top, right, bottom))
+
+      # Save cropped image
+      img.save("centered_image.jpg")
+    # Load cropped image as clip
+    centered_clip = ImageClip("centered_image.jpg")
+    centered_clip = centered_clip.set_position("center")
+
+
     title_clip = create_text_clip(row['Title'], 7)
     first_col_clip = create_text_clip2(row['Column1'], 3.5)
     second_col_clip = create_text_clip3(row['Column2'], 3.5)
 
     # Position the text clips on the image
-    title_clip = title_clip.set_position(("center", -0.2), relative=True)
+    title_clip = title_clip.set_position(("center", 0), relative=True)
     first_col_clip = first_col_clip.set_position(("center", 0.3), relative=True)
     second_col_clip = second_col_clip.set_position(("center", 0.3), relative=True)
 
-    final_video = CompositeVideoClip([background_clip.set_duration(7), title_clip, first_col_clip, second_col_clip])
+    final_video = CompositeVideoClip([background_clip.set_duration(7), centered_clip.set_duration(7), title_clip, first_col_clip, second_col_clip])
     return final_video
 
 if __name__ == "__main__":
